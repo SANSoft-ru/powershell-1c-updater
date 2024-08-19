@@ -12,9 +12,12 @@
 	[bool]$TestRun
 )
 
+# Образец запуска
+# Если установлена 32бит 1С-Платформа, то запускать скрипт нужно в 32бит Powershell
+# .\Update.ps1 -Mode A -VersionList "3_0_152_15,3_0_157_32" -ConfigFileName updList.txt -TestRun $true
+
 # Глобальные переменные и константы
-# .\Update.ps1 -Mode A -VersionList "3_0_157_32" -ConfigFileName updList-test.txt -TestRun $true
-$Debug = $TestRun
+$Debug = $TestRun 
 $ParamIsGood = $true
 $DbList = New-Object 'System.Collections.Generic.Dictionary[string,string]'
 $Versions = New-Object 'System.Collections.Generic.List[string[]]'
@@ -32,6 +35,9 @@ $WaitUsers = $(if ($Debug) { 90 } else { 180 })
 
 $Mode = $Mode.ToUpper()
 
+# Вывод строки текста в лог-файл
+# text - Текст для вывода, не обязательный параметр, по умолчанию - пустой
+# level - Уровень серьёзности, не обязательный параметр, по умолчанию - пустой
 Function WriteLog([string]$text, [string]$level)
 {
 	$timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
@@ -46,18 +52,30 @@ Function WriteLog([string]$text, [string]$level)
 	Write-Output $messageText | Out-File $LogFileName -Append
 }
 
+# Вывод стартовой строки текста какого-то процесса в лог-файл
+# text - Текст для вывода, обязательный параметр, по умолчанию - пустой
+# Возвращает время старта
 Function WriteStartMessage([string]$text)
 {
 	WriteLog -text "$text начало..."
 	Return Get-Date
 }
 
+# Вывод строки текста об окончании какого-то процесса в лог-файл
+# дополнительно выводятся в лог данные о результатах выполнения
+# и продолжительность выполнения процесса
+# text - Текст для вывода, обязательный параметр, по умолчанию - пустой
+# result - Результат выполнения процесса, обязательный параметр, по умолчанию - 0
+# startTime - Время старта процесса для расчёта продолжительности его выполнения, обязательный параметр
 Function WriteStopMessage([string]$text, [int]$result, [DateTime]$startTime)
 {
     $difference = ((Get-Date) - $startTime).ToString()
 	WriteLog -text "$text окончен. Код возврата $result. Время выполнения $difference"
 }
 
+# Запуск процесса 1С с указанными параметрами и ожиданием результата выполнения
+# params1c - Параметры запуска процесса 1С, обязательный параметр
+# Возвращает результат выполнения процесса 1С
 Function Run1CWithWait([string]$params1c)
 {
 	$additionalParameters = " /UC""$UnlockCode"" /DisableStartupMessages /DisableStartupDialogs /Out ""$LogFileName"" -NoTruncate"
@@ -190,6 +208,8 @@ Function SetScheduledJobsDenied([string]$server1c,[string]$dbName,[string]$dbUse
 	return $oldStatus
 }
 
+# Запуск процесса 1С с указанными параметрами без ожидания результата выполнения
+# params1c - Параметры запуска процесса 1С, обязательный параметр
 Function Run1C([string]$params1c)
 {
 	$processInfo = New-Object System.Diagnostics.ProcessStartInfo

@@ -1,4 +1,4 @@
-Param (
+п»їParam (
 	[Parameter (Mandatory=$true, Position=1)]
 	[string]$Mode,
 
@@ -12,7 +12,7 @@ Param (
 	[bool]$TestRun
 )
 
-# Глобальные переменные и константы
+# Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ Рё РєРѕРЅСЃС‚Р°РЅС‚С‹
 # .\Update.ps1 -Mode A -VersionList "3_0_157_32" -ConfigFileName updList-test.txt -TestRun $true
 $Debug = $TestRun
 $ParamIsGood = $true
@@ -26,7 +26,7 @@ $LogFileName = ""
 $global:ConnectionTo1c = $null
 $global:LastConnectionString = ""
 $COMConnectorId = "v83.COMConnector"
-$UnlockCode = "Powershell_ПакетноеОбновлениеКонфигурацииИБ"
+$UnlockCode = "Powershell_РџР°РєРµС‚РЅРѕРµРћР±РЅРѕРІР»РµРЅРёРµРљРѕРЅС„РёРіСѓСЂР°С†РёРёРР‘"
 $Delay = $(if ($Debug) { 5 } else { 600 })
 $WaitUsers = $(if ($Debug) { 90 } else { 180 })
 
@@ -48,14 +48,14 @@ Function WriteLog([string]$text, [string]$level)
 
 Function WriteStartMessage([string]$text)
 {
-	WriteLog -text "$text начало..."
+	WriteLog -text "$text РЅР°С‡Р°Р»Рѕ..."
 	Return Get-Date
 }
 
 Function WriteStopMessage([string]$text, [int]$result, [DateTime]$startTime)
 {
     $difference = ((Get-Date) - $startTime).ToString()
-	WriteLog -text "$text окончен. Код возврата $result. Время выполнения $difference"
+	WriteLog -text "$text РѕРєРѕРЅС‡РµРЅ. РљРѕРґ РІРѕР·РІСЂР°С‚Р° $result. Р’СЂРµРјСЏ РІС‹РїРѕР»РЅРµРЅРёСЏ $difference"
 }
 
 Function Run1CWithWait([string]$params1c)
@@ -89,7 +89,7 @@ Function Run1CWithWait([string]$params1c)
 Function ConnectTo1C([string]$connectionString)
 {
 	if ($global:ConnectionTo1c -and $global:LastConnectionString -eq $connectionString) {
-		WriteLog "Используем старое подключение: $connectionString"
+		WriteLog "РСЃРїРѕР»СЊР·СѓРµРј СЃС‚Р°СЂРѕРµ РїРѕРґРєР»СЋС‡РµРЅРёРµ: $connectionString"
 		return $global:ConnectionTo1c
 	}
 
@@ -97,12 +97,12 @@ Function ConnectTo1C([string]$connectionString)
 	$global:LastConnectionString = ""
 
 	try {
-		WriteLog "Подключаемся к 1С: $connectionString"
+		WriteLog "РџРѕРґРєР»СЋС‡Р°РµРјСЃСЏ Рє 1РЎ: $connectionString"
 		$Connector = New-Object -ComObject $COMConnectorId
 		$global:ConnectionTo1c = $Connector.Connect($connectionString)
 		$global:LastConnectionString = $connectionString
 	} catch {
-		WriteLog "Ошибка при создании и подключении COM-Объекта $COMConnectorId" "ERROR"
+		WriteLog "РћС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё Рё РїРѕРґРєР»СЋС‡РµРЅРёРё COM-РћР±СЉРµРєС‚Р° $COMConnectorId" "ERROR"
 		WriteLog $_ "ERROR"
 		$global:ConnectionTo1c = $null
 		$global:LastConnectionString = ""
@@ -120,7 +120,7 @@ Function GetProperty([System.__ComObject]$obj,[string]$propertyName)
 		$property = [System.__ComObject].InvokeMember($propertyName,[System.Reflection.BindingFlags]::GetProperty,$null,$obj,$null)
 	} catch {
 		$property = $null
-		WriteLog "Ошибка получения свойства $propertyName" "ERROR"
+		WriteLog "РћС€РёР±РєР° РїРѕР»СѓС‡РµРЅРёСЏ СЃРІРѕР№СЃС‚РІР° $propertyName" "ERROR"
 		WriteLog $_ "ERROR"
 	}
 
@@ -138,7 +138,7 @@ Function CallMethod([System.__ComObject]$obj,[string]$methodName,[object]$paramA
 		$retvalue = [System.__ComObject].InvokeMember($methodName,[System.Reflection.BindingFlags]::InvokeMethod,$null,$obj,$paramArray)
 	} catch {
 		$retvalue = $null
-		WriteLog "Ошибка вызова метода $methodName" "ERROR"
+		WriteLog "РћС€РёР±РєР° РІС‹Р·РѕРІР° РјРµС‚РѕРґР° $methodName" "ERROR"
 		WriteLog $_ "ERROR"
 	}
 
@@ -157,7 +157,7 @@ Function SetScheduledJobsDenied([string]$server1c,[string]$dbName,[string]$dbUse
 		$WorkingProcess = $AgentConnection.GetWorkingProcesses($Cluster)[0]	
 
 		$ConnectionString = "{0}:{1}" -f $WorkingProcess.HostName, $WorkingProcess.MainPort
-		WriteLog "Подключаемся к рабочем процессу: $ConnectionString"
+		WriteLog "РџРѕРґРєР»СЋС‡Р°РµРјСЃСЏ Рє СЂР°Р±РѕС‡РµРј РїСЂРѕС†РµСЃСЃСѓ: $ConnectionString"
 
 		$WorkingProcessConnection = $Connector.ConnectWorkingProcess($ConnectionString)
 		$WorkingProcessConnection.AddAuthentication($dbUser,$dbPassword)
@@ -170,13 +170,13 @@ Function SetScheduledJobsDenied([string]$server1c,[string]$dbName,[string]$dbUse
 			if ($oldStatus -ne $flag) {
 				$ib.ScheduledJobsDenied = $flag
 				$WorkingProcessConnection.UpdateInfoBase($ib)
-				WriteLog "Флаг запрета регламентных установлен в значение $flag"
+				WriteLog "Р¤Р»Р°Рі Р·Р°РїСЂРµС‚Р° СЂРµРіР»Р°РјРµРЅС‚РЅС‹С… СѓСЃС‚Р°РЅРѕРІР»РµРЅ РІ Р·РЅР°С‡РµРЅРёРµ $flag"
 			}
 		} else {
-			WriteLog "На сервере [$server1c] не найдена информационная база [$dbName]" "ERROR"
+			WriteLog "РќР° СЃРµСЂРІРµСЂРµ [$server1c] РЅРµ РЅР°Р№РґРµРЅР° РёРЅС„РѕСЂРјР°С†РёРѕРЅРЅР°СЏ Р±Р°Р·Р° [$dbName]" "ERROR"
 		}
 	} catch {
-		WriteLog "Ошибка установки флага [$flag] запрета регламентных заданий" "ERROR"
+		WriteLog "РћС€РёР±РєР° СѓСЃС‚Р°РЅРѕРІРєРё С„Р»Р°РіР° [$flag] Р·Р°РїСЂРµС‚Р° СЂРµРіР»Р°РјРµРЅС‚РЅС‹С… Р·Р°РґР°РЅРёР№" "ERROR"
 		WriteLog $_ "ERROR"
 	} finally {
 		$ib = $null
@@ -250,14 +250,14 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	$DbPath = $DbConnectionParts[0].Trim()
 
 	WriteLog "-------------------------------------------------------"
-	WriteLog "Обновляем [$CounterText] $DbPath"
+	WriteLog "РћР±РЅРѕРІР»СЏРµРј [$CounterText] $DbPath"
 
-	# Путь к БД
+	# РџСѓС‚СЊ Рє Р‘Р”
 	if ($DbPath.StartsWith("\\") -or ($DbPath.Substring(1, 2) -eq ":\")) {
 		$DbType = "/F"
 		$DbConnectionString1c = "File=""$DbPath"""
 		if (!(Test-Path "$DbPath\1Cv8.1CD")) {
-			WriteLog "Не найден файл БД 1С в папке $DbPath" "ERROR"
+			WriteLog "РќРµ РЅР°Р№РґРµРЅ С„Р°Р№Р» Р‘Р” 1РЎ РІ РїР°РїРєРµ $DbPath" "ERROR"
 			WriteLog
 			ForceReleaseComConnection
 			Return $UpdateSuccess
@@ -269,21 +269,21 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 			$dbName = $DbPathParts[1].Trim()
 			$DbConnectionString1c = "Srvr=""$dbServer"";Ref=""$dbName"""
 		} else {
-			WriteLog "Неверно указаны параметры подключения к БД $DbPath" "ERROR"
+			WriteLog "РќРµРІРµСЂРЅРѕ СѓРєР°Р·Р°РЅС‹ РїР°СЂР°РјРµС‚СЂС‹ РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Р‘Р” $DbPath" "ERROR"
 			WriteLog
 			ForceReleaseComConnection
 			Return $UpdateSuccess
 		}
 	}
 
-	# Логин пользователя 1С
+	# Р›РѕРіРёРЅ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ 1РЎ
 	if ($DbConnectionParts.Count -ge 2) {
 		if ($DbConnectionParts[1].Trim()) {
 			$DbUser = $DbConnectionParts[1].Trim()
 		}
 	}
 
-	# Пароль пользователя 1С
+	# РџР°СЂРѕР»СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ 1РЎ
 	if ($DbConnectionParts.Count -ge 3) {
 		if ($DbConnectionParts[2].Trim()) {
 			$DbPassword = $DbConnectionParts[2].Trim()
@@ -294,53 +294,53 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	$DbConnectionString1c = "{0};Usr=""{1}"";Pwd=""{2}"";UC={3}" -f $DbConnectionString1c, $DbUser, $DbPassword, $UnlockCode
 	$BackupFileName = """{0}\{1}_{2}.dt.dll""" -f $WorkPath, $DbName, (Get-Date).ToString("yyyyMMdd-HHmmss")
 
-	# Завершение работы пользователей
-	WriteLog "Завершение работы пользователей..."
+	# Р—Р°РІРµСЂС€РµРЅРёРµ СЂР°Р±РѕС‚С‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+	WriteLog "Р—Р°РІРµСЂС€РµРЅРёРµ СЂР°Р±РѕС‚С‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№..."
 	$SessionCount = 5
 	$Message = ""
 	try {
 		$connection = ConnectTo1C $DbConnectionString1c
-		$IbConnections = GetProperty $connection "СоединенияИБ"
-		$RetValue = CallMethod $IbConnections "УстановитьБлокировкуСоединений" @("в связи с необходимостью обновления конфигурации", $UnlockCode)
+		$IbConnections = GetProperty $connection "РЎРѕРµРґРёРЅРµРЅРёСЏРР‘"
+		$RetValue = CallMethod $IbConnections "РЈСЃС‚Р°РЅРѕРІРёС‚СЊР‘Р»РѕРєРёСЂРѕРІРєСѓРЎРѕРµРґРёРЅРµРЅРёР№" @("РІ СЃРІСЏР·Рё СЃ РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚СЊСЋ РѕР±РЅРѕРІР»РµРЅРёСЏ РєРѕРЅС„РёРіСѓСЂР°С†РёРё", $UnlockCode)
 
-		$BlockParams = [System.__ComObject].InvokeMember("ПараметрыБлокировкиСеансов",[System.Reflection.BindingFlags]::InvokeMethod,$null,$IbConnections,@($true))
+		$BlockParams = [System.__ComObject].InvokeMember("РџР°СЂР°РјРµС‚СЂС‹Р‘Р»РѕРєРёСЂРѕРІРєРёРЎРµР°РЅСЃРѕРІ",[System.Reflection.BindingFlags]::InvokeMethod,$null,$IbConnections,@($true))
 
-		$DisconnectionInterval = GetProperty $BlockParams "ИнтервалОжиданияЗавершенияРаботыПользователей"
+		$DisconnectionInterval = GetProperty $BlockParams "РРЅС‚РµСЂРІР°Р»РћР¶РёРґР°РЅРёСЏР—Р°РІРµСЂС€РµРЅРёСЏР Р°Р±РѕС‚С‹РџРѕР»СЊР·РѕРІР°С‚РµР»РµР№"
 		if ($DisconnectionInterval -gt 1800) {
 			$DisconnectionInterval = 1800
 		}
-		WriteLog "ИнтервалОжиданияЗавершенияРаботыПользователей: $DisconnectionInterval"
+		WriteLog "РРЅС‚РµСЂРІР°Р»РћР¶РёРґР°РЅРёСЏР—Р°РІРµСЂС€РµРЅРёСЏР Р°Р±РѕС‚С‹РџРѕР»СЊР·РѕРІР°С‚РµР»РµР№: $DisconnectionInterval"
 
-		$DisconnectionStartDateTime = GetProperty $BlockParams "Начало"
-		WriteLog "Начало: $DisconnectionStartDateTime"
+		$DisconnectionStartDateTime = GetProperty $BlockParams "РќР°С‡Р°Р»Рѕ"
+		WriteLog "РќР°С‡Р°Р»Рѕ: $DisconnectionStartDateTime"
 
-		$DisconnectionEnabled = GetProperty $BlockParams "Установлена"
-		WriteLog "Установлена: $DisconnectionEnabled"
+		$DisconnectionEnabled = GetProperty $BlockParams "РЈСЃС‚Р°РЅРѕРІР»РµРЅР°"
+		WriteLog "РЈСЃС‚Р°РЅРѕРІР»РµРЅР°: $DisconnectionEnabled"
 		if ($DisconnectionEnabled) {
-			$SessionCount = GetProperty $BlockParams "КоличествоСеансов"
-			WriteLog "КоличествоСеансов: $SessionCount"
+			$SessionCount = GetProperty $BlockParams "РљРѕР»РёС‡РµСЃС‚РІРѕРЎРµР°РЅСЃРѕРІ"
+			WriteLog "РљРѕР»РёС‡РµСЃС‚РІРѕРЎРµР°РЅСЃРѕРІ: $SessionCount"
 
 			if ($SessionCount -gt 1) {
-				# Ожидание выхода пользователей
+				# РћР¶РёРґР°РЅРёРµ РІС‹С…РѕРґР° РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
 				$DisconnectionEndDateTime = $DisconnectionStartDateTime.AddSeconds($DisconnectionInterval)
-				WriteLog "Ожидаем до: $DisconnectionEndDateTime"
+				WriteLog "РћР¶РёРґР°РµРј РґРѕ: $DisconnectionEndDateTime"
 				while ((Get-Date) -lt $DisconnectionEndDateTime -and $SessionCount -gt 1) {
 					Start-Sleep -s $WaitUsers
-					$SessionCount = CallMethod $IbConnections "КоличествоСеансовИнформационнойБазы" @($false)
-					WriteLog "КоличествоСеансов: $SessionCount"
+					$SessionCount = CallMethod $IbConnections "РљРѕР»РёС‡РµСЃС‚РІРѕРЎРµР°РЅСЃРѕРІРРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕР№Р‘Р°Р·С‹" @($false)
+					WriteLog "РљРѕР»РёС‡РµСЃС‚РІРѕРЎРµР°РЅСЃРѕРІ: $SessionCount"
 				}
 			}
 		}
 
 		if ($SessionCount -gt 1) {
-			$RetValue = CallMethod $IbConnections "РазрешитьРаботуПользователей"
-			$Message = CallMethod $IbConnections "СообщениеОНеотключенныхСеансах"
+			$RetValue = CallMethod $IbConnections "Р Р°Р·СЂРµС€РёС‚СЊР Р°Р±РѕС‚СѓРџРѕР»СЊР·РѕРІР°С‚РµР»РµР№"
+			$Message = CallMethod $IbConnections "РЎРѕРѕР±С‰РµРЅРёРµРћРќРµРѕС‚РєР»СЋС‡РµРЅРЅС‹С…РЎРµР°РЅСЃР°С…"
 
-			WriteLog "Не удалось завершить работу пользователей" "ERROR"
+			WriteLog "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РІРµСЂС€РёС‚СЊ СЂР°Р±РѕС‚Сѓ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№" "ERROR"
 			WriteLog $Message "ERROR"
 		} 
 	} catch {
-		WriteLog "Ошибка завершения работы пользователей" "ERROR"
+		WriteLog "РћС€РёР±РєР° Р·Р°РІРµСЂС€РµРЅРёСЏ СЂР°Р±РѕС‚С‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№" "ERROR"
 		WriteLog $_ "ERROR"
 		$SessionCount = 5
 	} finally {
@@ -360,7 +360,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	WriteStopMessage "DumpIB" $returnCode $startTime
 	
 	if ($returnCode -ne 0) {
-		WriteLog "Ошибка резервного копирования" "ERROR"
+		WriteLog "РћС€РёР±РєР° СЂРµР·РµСЂРІРЅРѕРіРѕ РєРѕРїРёСЂРѕРІР°РЅРёСЏ" "ERROR"
 		WriteLog
 		ForceReleaseComConnection
 		Return $UpdateSuccess
@@ -368,23 +368,23 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 		WriteLog
 	}
 
-	# Установка блокировки регламентных заданий, если её нет
+	# РЈСЃС‚Р°РЅРѕРІРєР° Р±Р»РѕРєРёСЂРѕРІРєРё СЂРµРіР»Р°РјРµРЅС‚РЅС‹С… Р·Р°РґР°РЅРёР№, РµСЃР»Рё РµС‘ РЅРµС‚
 	if ($DbType -eq "/S") {
-		WriteLog "Попытка установки флага запрета регламентных заданий..."
+		WriteLog "РџРѕРїС‹С‚РєР° СѓСЃС‚Р°РЅРѕРІРєРё С„Р»Р°РіР° Р·Р°РїСЂРµС‚Р° СЂРµРіР»Р°РјРµРЅС‚РЅС‹С… Р·Р°РґР°РЅРёР№..."
 		$ScheduledJobsDeniedStatus = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $true
-		WriteLog "Старое значение флага запрета регламентных заданий: $ScheduledJobsDeniedStatus"
+		WriteLog "РЎС‚Р°СЂРѕРµ Р·РЅР°С‡РµРЅРёРµ С„Р»Р°РіР° Р·Р°РїСЂРµС‚Р° СЂРµРіР»Р°РјРµРЅС‚РЅС‹С… Р·Р°РґР°РЅРёР№: $ScheduledJobsDeniedStatus"
 		WriteLog
 	}
 
-	# Удаление патчей
-	WriteLog "Попытка удаления патчей..."
+	# РЈРґР°Р»РµРЅРёРµ РїР°С‚С‡РµР№
+	WriteLog "РџРѕРїС‹С‚РєР° СѓРґР°Р»РµРЅРёСЏ РїР°С‚С‡РµР№..."
 	try {
 		$connection = ConnectTo1C $DbConnectionString1c
-		$UpdConfSeverCall = GetProperty $connection "ОбновлениеКонфигурацииВызовСервера"
-		$RetValue = CallMethod $UpdConfSeverCall "УдалитьИсправленияИзСкрипта" 
-		WriteLog "Команда 1с: ОбновлениеКонфигурацииВызовСервера.УдалитьИсправленияИзСкрипта(). Результат: $RetValue"
+		$UpdConfSeverCall = GetProperty $connection "РћР±РЅРѕРІР»РµРЅРёРµРљРѕРЅС„РёРіСѓСЂР°С†РёРёР’С‹Р·РѕРІРЎРµСЂРІРµСЂР°"
+		$RetValue = CallMethod $UpdConfSeverCall "РЈРґР°Р»РёС‚СЊРСЃРїСЂР°РІР»РµРЅРёСЏРР·РЎРєСЂРёРїС‚Р°" 
+		WriteLog "РљРѕРјР°РЅРґР° 1СЃ: РћР±РЅРѕРІР»РµРЅРёРµРљРѕРЅС„РёРіСѓСЂР°С†РёРёР’С‹Р·РѕРІРЎРµСЂРІРµСЂР°.РЈРґР°Р»РёС‚СЊРСЃРїСЂР°РІР»РµРЅРёСЏРР·РЎРєСЂРёРїС‚Р°(). Р РµР·СѓР»СЊС‚Р°С‚: $RetValue"
 	} catch {
-		WriteLog "Ошибка удаления патчей" "ERROR"
+		WriteLog "РћС€РёР±РєР° СѓРґР°Р»РµРЅРёСЏ РїР°С‚С‡РµР№" "ERROR"
 		WriteLog $_ "ERROR"
 	} finally {
 		$UpdConfSeverCall = $null
@@ -424,20 +424,20 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	}
 
 	if (!$hasError) {
-		# Запуск обработчиков обновления
-		WriteLog "Запуск обработчиков обновления..."
+		# Р—Р°РїСѓСЃРє РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ РѕР±РЅРѕРІР»РµРЅРёСЏ
+		WriteLog "Р—Р°РїСѓСЃРє РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ РѕР±РЅРѕРІР»РµРЅРёСЏ..."
 		try {
 			$connection = ConnectTo1C $DbConnectionString1c
-			$UpdIbSeverCall = GetProperty $connection "ОбновлениеИнформационнойБазыВызовСервера"
-			$RetValue = CallMethod $UpdIbSeverCall "ВыполнитьОбновлениеИнформационнойБазы" @($false) 
-			WriteLog "Команда 1с: ОбновлениеИнформационнойБазыВызовСервера.ВыполнитьОбновлениеИнформационнойБазы(). Результат: $RetValue"
+			$UpdIbSeverCall = GetProperty $connection "РћР±РЅРѕРІР»РµРЅРёРµРРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕР№Р‘Р°Р·С‹Р’С‹Р·РѕРІРЎРµСЂРІРµСЂР°"
+			$RetValue = CallMethod $UpdIbSeverCall "Р’С‹РїРѕР»РЅРёС‚СЊРћР±РЅРѕРІР»РµРЅРёРµРРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕР№Р‘Р°Р·С‹" @($false) 
+			WriteLog "РљРѕРјР°РЅРґР° 1СЃ: РћР±РЅРѕРІР»РµРЅРёРµРРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕР№Р‘Р°Р·С‹Р’С‹Р·РѕРІРЎРµСЂРІРµСЂР°.Р’С‹РїРѕР»РЅРёС‚СЊРћР±РЅРѕРІР»РµРЅРёРµРРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕР№Р‘Р°Р·С‹(). Р РµР·СѓР»СЊС‚Р°С‚: $RetValue"
 
-			$UpdConf = GetProperty $connection "ОбновлениеКонфигурации"
-			$RetValue = CallMethod $UpdConf "ЗавершитьОбновление" @($true,"",$DbUser) 
-			WriteLog "Команда 1с: ОбновлениеКонфигурации.ЗавершитьОбновление(). Результат: $RetValue"
+			$UpdConf = GetProperty $connection "РћР±РЅРѕРІР»РµРЅРёРµРљРѕРЅС„РёРіСѓСЂР°С†РёРё"
+			$RetValue = CallMethod $UpdConf "Р—Р°РІРµСЂС€РёС‚СЊРћР±РЅРѕРІР»РµРЅРёРµ" @($true,"",$DbUser) 
+			WriteLog "РљРѕРјР°РЅРґР° 1СЃ: РћР±РЅРѕРІР»РµРЅРёРµРљРѕРЅС„РёРіСѓСЂР°С†РёРё.Р—Р°РІРµСЂС€РёС‚СЊРћР±РЅРѕРІР»РµРЅРёРµ(). Р РµР·СѓР»СЊС‚Р°С‚: $RetValue"
 			$UpdateSuccess = $true
 		} catch {
-			WriteLog "Ошибка запуска обработчиков обновления" "ERROR"
+			WriteLog "РћС€РёР±РєР° Р·Р°РїСѓСЃРєР° РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ РѕР±РЅРѕРІР»РµРЅРёСЏ" "ERROR"
 			WriteLog $_ "ERROR"
 		} finally {
 			$UpdConf = $null
@@ -446,18 +446,18 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 		}
 		WriteLog
 	} else {
-		WriteLog "Во время обновления возникли ошибки" "ERROR"
+		WriteLog "Р’Рѕ РІСЂРµРјСЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РІРѕР·РЅРёРєР»Рё РѕС€РёР±РєРё" "ERROR"
 		WriteLog
 	}
 
-	# Разрешение работы пользователей
-	WriteLog "Разрешение работы пользователей..."
+	# Р Р°Р·СЂРµС€РµРЅРёРµ СЂР°Р±РѕС‚С‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+	WriteLog "Р Р°Р·СЂРµС€РµРЅРёРµ СЂР°Р±РѕС‚С‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№..."
 	try {
 		$connection = ConnectTo1C $DbConnectionString1c
-		$IbConnections = GetProperty $connection "СоединенияИБ"
-		$RetValue = CallMethod $IbConnections "РазрешитьРаботуПользователей"
+		$IbConnections = GetProperty $connection "РЎРѕРµРґРёРЅРµРЅРёСЏРР‘"
+		$RetValue = CallMethod $IbConnections "Р Р°Р·СЂРµС€РёС‚СЊР Р°Р±РѕС‚СѓРџРѕР»СЊР·РѕРІР°С‚РµР»РµР№"
 	} catch {
-		WriteLog "Ошибка разрешения работы пользователей" "ERROR"
+		WriteLog "РћС€РёР±РєР° СЂР°Р·СЂРµС€РµРЅРёСЏ СЂР°Р±РѕС‚С‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№" "ERROR"
 		WriteLog $_ "ERROR"
 	} finally {
 		$IbConnections = $null
@@ -466,19 +466,19 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	WriteLog
 
 	if ($UpdateSuccess) {
-		WriteLog "Запуск ENTERPRISE..."
+		WriteLog "Р—Р°РїСѓСЃРє ENTERPRISE..."
 		Run1C "ENTERPRISE $DbConnectionString"
 		WriteLog
 	}
 
 	if (!$ScheduledJobsDeniedStatus) {
-		WriteLog "Пауза $Delay сек."
+		WriteLog "РџР°СѓР·Р° $Delay СЃРµРє."
 		Start-Sleep -s $Delay
-		WriteLog "Попытка восстановления флага запрета регламентных заданий..."
+		WriteLog "РџРѕРїС‹С‚РєР° РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ С„Р»Р°РіР° Р·Р°РїСЂРµС‚Р° СЂРµРіР»Р°РјРµРЅС‚РЅС‹С… Р·Р°РґР°РЅРёР№..."
 		$rc = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $false
 		WriteLog
 	} else {
-		WriteLog "Восстановление флага запрета регламентных заданий не требуется"
+		WriteLog "Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ С„Р»Р°РіР° Р·Р°РїСЂРµС‚Р° СЂРµРіР»Р°РјРµРЅС‚РЅС‹С… Р·Р°РґР°РЅРёР№ РЅРµ С‚СЂРµР±СѓРµС‚СЃСЏ"
 		WriteLog
 	}
 
@@ -489,21 +489,21 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	Return $UpdateSuccess
 }
 
-# Разбор параметров запуска
+# Р Р°Р·Р±РѕСЂ РїР°СЂР°РјРµС‚СЂРѕРІ Р·Р°РїСѓСЃРєР°
 
 if ($Mode -eq "A") {
 	$ModeName = "Accounting"
-	$ModeDescription = "Бухгалтерия"
+	$ModeDescription = "Р‘СѓС…РіР°Р»С‚РµСЂРёСЏ"
 } elseif ($Mode -eq "H") {
 	$ModeName = "HRM"
-	$ModeDescription = "ЗУП"
+	$ModeDescription = "Р—РЈРџ"
 } else {
-	Write-Warning("Параметр Mode должен быть равен A (Бухгалтерия) или H (ЗУП)")
+	Write-Warning("РџР°СЂР°РјРµС‚СЂ Mode РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ СЂР°РІРµРЅ A (Р‘СѓС…РіР°Р»С‚РµСЂРёСЏ) РёР»Рё H (Р—РЈРџ)")
 	$ParamIsGood = $false
 }
 
 if (!(Test-Path $ConfigFileName)) {
-	Write-Warning("Файл конфигурации [$ConfigFileName] не найден")
+	Write-Warning("Р¤Р°Р№Р» РєРѕРЅС„РёРіСѓСЂР°С†РёРё [$ConfigFileName] РЅРµ РЅР°Р№РґРµРЅ")
 	$ParamIsGood = $false
 } else {
 	$ConfigLines = Get-Content -Path $ConfigFileName | Where {!$_.StartsWith("#") -and $_}	
@@ -515,25 +515,25 @@ if (!(Test-Path $ConfigFileName)) {
 			$KeyName = $Key.ToLower()
 			if ($KeyName -eq "mode") {
 				if (!($Value.ToLower() -eq "update")) {
-					Write-Warning("Режим конфигурации [$ConfigLine] не равен Update")
+					Write-Warning("Р РµР¶РёРј РєРѕРЅС„РёРіСѓСЂР°С†РёРё [$ConfigLine] РЅРµ СЂР°РІРµРЅ Update")
 					$ParamIsGood = $false
 				}
 			} elseif ($KeyName -eq "workpath") {
 				$WorkPath = $Value.Trim()
 				if (!(Test-Path $WorkPath)) {
-					Write-Warning("Рабочая папка из конфигурации [$WorkPath] не найдена")
+					Write-Warning("Р Р°Р±РѕС‡Р°СЏ РїР°РїРєР° РёР· РєРѕРЅС„РёРіСѓСЂР°С†РёРё [$WorkPath] РЅРµ РЅР°Р№РґРµРЅР°")
 					$ParamIsGood = $false
 				}
 			} elseif ($KeyName -eq "exepath") {
 				$Exe1cv8 = $Value.Trim()+"\1cv8.exe"
 				if (!(Test-Path $Exe1cv8)) {
-					Write-Warning("Бинарник 1С по пути из конфигурации [$Value] не найден")
+					Write-Warning("Р‘РёРЅР°СЂРЅРёРє 1РЎ РїРѕ РїСѓС‚Рё РёР· РєРѕРЅС„РёРіСѓСЂР°С†РёРё [$Value] РЅРµ РЅР°Р№РґРµРЅ")
 					$ParamIsGood = $false
 				}
 			} elseif ($KeyName -eq "templates") {
 				$Templates = $Value.Trim()+"\"+$ModeName
 				if (!(Test-Path $Templates)) {
-					Write-Warning("Путь к обновлениям [$ModeName] из конфигурации [$Value] не найден")
+					Write-Warning("РџСѓС‚СЊ Рє РѕР±РЅРѕРІР»РµРЅРёСЏРј [$ModeName] РёР· РєРѕРЅС„РёРіСѓСЂР°С†РёРё [$Value] РЅРµ РЅР°Р№РґРµРЅ")
 					$ParamIsGood = $false
 				}
 			} else {
@@ -542,41 +542,41 @@ if (!(Test-Path $ConfigFileName)) {
 						if ($Value) {
 							$DbList.Add($Key, $Value.Trim())
 						} else {
-							Write-Warning("В конфигурации не указана БД [$Key]")
+							Write-Warning("Р’ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРµ СѓРєР°Р·Р°РЅР° Р‘Р” [$Key]")
 							$ParamIsGood = $false
 						}
 					}
 				} else {
-					Write-Warning("В конфигурации дублируется БД [$Key]")
+					Write-Warning("Р’ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РґСѓР±Р»РёСЂСѓРµС‚СЃСЏ Р‘Р” [$Key]")
 					$ParamIsGood = $false
  				}
 			}
 		} else {
-			Write-Warning("Строка конфигурации [$ConfigLine] не соотвествует шаблону Key=Value")
+			Write-Warning("РЎС‚СЂРѕРєР° РєРѕРЅС„РёРіСѓСЂР°С†РёРё [$ConfigLine] РЅРµ СЃРѕРѕС‚РІРµСЃС‚РІСѓРµС‚ С€Р°Р±Р»РѕРЅСѓ Key=Value")
 			$ParamIsGood = $false
 		}
 	}
 }
 
 if (!$WorkPath) {
-	Write-Warning("В конфигурации не указана рабочая папка. Параметр WorkPath")
+	Write-Warning("Р’ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРµ СѓРєР°Р·Р°РЅР° СЂР°Р±РѕС‡Р°СЏ РїР°РїРєР°. РџР°СЂР°РјРµС‚СЂ WorkPath")
 	$ParamIsGood = $false
 }
 
 if (!$Exe1cv8) {
-	Write-Warning("В конфигурации не указана путь к бинарникам 1С. Параметр EXEPath")
+	Write-Warning("Р’ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРµ СѓРєР°Р·Р°РЅР° РїСѓС‚СЊ Рє Р±РёРЅР°СЂРЅРёРєР°Рј 1РЎ. РџР°СЂР°РјРµС‚СЂ EXEPath")
 	$ParamIsGood = $false
 }
 
 if (!$Templates) {
-	Write-Warning("В конфигурации не указана путь к файлам обновлений. Параметр Templates")
+	Write-Warning("Р’ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРµ СѓРєР°Р·Р°РЅР° РїСѓС‚СЊ Рє С„Р°Р№Р»Р°Рј РѕР±РЅРѕРІР»РµРЅРёР№. РџР°СЂР°РјРµС‚СЂ Templates")
 	$ParamIsGood = $false
 } else {
 	ForEach ($Version In $VersionList.Split(",")) {
 		$versionTrim = $Version.Trim()
 		$VersionPath = $Templates + "\" + $versionTrim + "\1cv8.cfu"
 		if (!(Test-Path $VersionPath)) {
-			Write-Warning("Файл обновления версии [$VersionPath] не найден")
+			Write-Warning("Р¤Р°Р№Р» РѕР±РЅРѕРІР»РµРЅРёСЏ РІРµСЂСЃРёРё [$VersionPath] РЅРµ РЅР°Р№РґРµРЅ")
 			$ParamIsGood = $false
 		} else {
 			$Versions.Add(@($versionTrim,$VersionPath))
@@ -585,12 +585,12 @@ if (!$Templates) {
 }
 
 if ($DbList.Count -eq 0) {
-	Write-Warning("В конфигурации не указаны строки подключения к БД 1С")
+	Write-Warning("Р’ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРµ СѓРєР°Р·Р°РЅС‹ СЃС‚СЂРѕРєРё РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Р‘Р” 1РЎ")
 	$ParamIsGood = $false
 }
 
 if ($Versions.Count -eq 0) {
-	Write-Warning("Не указаны версии обновления 1С")
+	Write-Warning("РќРµ СѓРєР°Р·Р°РЅС‹ РІРµСЂСЃРёРё РѕР±РЅРѕРІР»РµРЅРёСЏ 1РЎ")
 	$ParamIsGood = $false
 }
 
@@ -598,22 +598,22 @@ if (!$ParamIsGood) {
 	Break
 }
 
-# Инициализация
+# РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ
 $LogFileName = $WorkPath + "\" + (Get-Date).ToString("yyyyMMdd-HHmmss") + ".log"
 $Exe1cv8 = $(if ($Debug) { "calc.exe" } else { $Exe1cv8 })
 
-WriteLog "SANSoft(c) 2024. Обновление баз 1С"
+WriteLog "SANSoft(c) 2024. РћР±РЅРѕРІР»РµРЅРёРµ Р±Р°Р· 1РЎ"
 WriteLog "=================================="
 WriteLog
-WriteLog "Режим отладки: $Debug"
-WriteLog "Режим обновления: [$Mode] $ModeDescription"
-WriteLog "Количество баз к обновлению: $($DbList.Count)"
+WriteLog "Р РµР¶РёРј РѕС‚Р»Р°РґРєРё: $Debug"
+WriteLog "Р РµР¶РёРј РѕР±РЅРѕРІР»РµРЅРёСЏ: [$Mode] $ModeDescription"
+WriteLog "РљРѕР»РёС‡РµСЃС‚РІРѕ Р±Р°Р· Рє РѕР±РЅРѕРІР»РµРЅРёСЋ: $($DbList.Count)"
 ForEach ($DbKey In $DbList.Keys) {
 	WriteLog "[$DbKey]"
 }
 WriteLog
 
-WriteLog "Количество обновлений: $($Versions.Count)"
+WriteLog "РљРѕР»РёС‡РµСЃС‚РІРѕ РѕР±РЅРѕРІР»РµРЅРёР№: $($Versions.Count)"
 ForEach ($Version In $Versions) {
 	$versionPath = $Version[1]
 	WriteLog "[$versionPath]"
@@ -635,9 +635,9 @@ ForEach ($DbKey In $DbList.Keys) {
 }
 
 WriteLog
-WriteLog "Итоги обновления:"
+WriteLog "РС‚РѕРіРё РѕР±РЅРѕРІР»РµРЅРёСЏ:"
 WriteLog "=".PadRight($tableWidth,"=")
-WriteLog ($tableRowTemplate -f (ToLeftStringWithWidth "База" 15),(ToLeftStringWithWidth "Результат" 9), "Время") 
+WriteLog ($tableRowTemplate -f (ToLeftStringWithWidth "Р‘Р°Р·Р°" 15),(ToLeftStringWithWidth "Р РµР·СѓР»СЊС‚Р°С‚" 9), "Р’СЂРµРјСЏ") 
 WriteLog "=".PadRight($tableWidth,"=")
 ForEach ($updResult In $UpdateResults) {
 	WriteLog $updResult
@@ -645,10 +645,10 @@ ForEach ($updResult In $UpdateResults) {
 WriteLog "=".PadRight($tableWidth,"=")
 
 $span = ((Get-Date) - $overallStartTime).ToString()
-WriteLog "Общеее время обновления $span"
+WriteLog "РћР±С‰РµРµРµ РІСЂРµРјСЏ РѕР±РЅРѕРІР»РµРЅРёСЏ $span"
 
 WriteLog
 WriteLog
-WriteLog "SANSoft(c) 2024. Обновление баз 1С"
+WriteLog "SANSoft(c) 2024. РћР±РЅРѕРІР»РµРЅРёРµ Р±Р°Р· 1РЎ"
 
 ForceReleaseComConnection

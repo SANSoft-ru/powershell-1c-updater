@@ -244,7 +244,7 @@ Function ForceReleaseComConnection()
 Function ToLeftStringWithWidth([object]$obj,[int]$width)
 {
 	$objString = " "
-	if ($obj) {
+	if ($obj -or ($obj -eq $false)) {
 		$objString = $obj.ToString()
 	} 
 	Return $objString.PadRight($width).Substring(0,$width)

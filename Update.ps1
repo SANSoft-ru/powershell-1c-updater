@@ -19,7 +19,7 @@
 # .\Update.ps1 -Mode A -VersionList "3_0_152_15,3_0_157_32" -ConfigFileName updList.txt -TestRun $true
 
 # Глобальные переменные и константы
-$Debug = $TestRun 
+$Debug = $TestRun
 $ParamIsGood = $true
 $DbList = New-Object 'System.Collections.Generic.Dictionary[string,string]'
 $Versions = New-Object 'System.Collections.Generic.List[string[]]'
@@ -190,7 +190,7 @@ Function SetScheduledJobsDenied([string]$server1c,[string]$dbName,[string]$dbUse
 			if ($oldStatus -ne $flag) {
 				$ib.ScheduledJobsDenied = $flag
 				$WorkingProcessConnection.UpdateInfoBase($ib)
-				WriteLog "Флаг запрета регламентных установлен в значение $flag"
+				WriteLog "Флаг запрета регламентных заданий установлен в значение $flag"
 			}
 		} else {
 			WriteLog "На сервере [$server1c] не найдена информационная база [$dbName]" "ERROR"
@@ -337,7 +337,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 		WriteLog "Начало: $DisconnectionStartDateTime"
 
 		$DisconnectionEnabled = GetProperty $BlockParams "Установлена"
-		WriteLog "Установлена: $DisconnectionEnabled"
+		WriteLog "Блокировка сеансов: $DisconnectionEnabled"
 		if ($DisconnectionEnabled) {
 			$SessionCount = GetProperty $BlockParams "КоличествоСеансов"
 			WriteLog "КоличествоСеансов: $SessionCount"
@@ -493,17 +493,17 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 		WriteLog
 	}
 
-	if (!$ScheduledJobsDeniedStatus) {
+	if ($ScheduledJobsDeniedStatus) {
+		WriteLog "Сброс флага запрета регламентных заданий..."
+		$rc = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $false
 		WriteLog "Пауза $Delay сек."
 		Start-Sleep -s $Delay
-		WriteLog "Попытка восстановления флага запрета регламентных заданий..."
-		$rc = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $false
-		WriteLog
-	} else {
-		WriteLog "Восстановление флага запрета регламентных заданий не требуется"
-		WriteLog
 	}
-
+	
+	WriteLog "Попытка восстановления флага запрета регламентных заданий..."
+	$rc = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $ScheduledJobsDeniedStatus
+	WriteLog
+		
 	WriteLog
 
 	ForceReleaseComConnection
@@ -652,7 +652,7 @@ ForEach ($DbKey In $DbList.Keys) {
 	$counter = "{0}/{1}" -f $index, $DbList.Count
 	$updResult = DoUpdate -CounterText $counter -DbName $DbKey -DbConnection $DbList[$DbKey] -Versions $Versions
 	$span = ((Get-Date) - $startTime).ToString()
-	$updResultString = $tableRowTemplate -f (ToLeftStringWithWidth $DbKey 15),(ToLeftStringWithWidth $updResult 9), $span 
+	$updResultString = $tableRowTemplate -f (ToLeftStringWithWidth $DbKey 15),(ToLeftStringWithWidth $updResult 9), $span
 	$UpdateResults.Add($updResultString)
 }
 

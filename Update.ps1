@@ -188,42 +188,44 @@ Function SetScheduledJobsDenied([string]$server1c,[string]$dbName,[string]$dbUse
 {
 	$oldStatus = $false
 
-	try {
-		$Connector = New-Object -ComObject $COMConnectorId
-		$AgentConnection = $Connector.ConnectAgent($server1c) 
-		$Cluster = $AgentConnection.GetClusters()[0] 
-		$AgentConnection.Authenticate($Cluster,"","") 
-		$WorkingProcess = $AgentConnection.GetWorkingProcesses($Cluster)[0]	
+	if (!$Debug) {
+		try {
+			$Connector = New-Object -ComObject $COMConnectorId
+			$AgentConnection = $Connector.ConnectAgent($server1c) 
+			$Cluster = $AgentConnection.GetClusters()[0] 
+			$AgentConnection.Authenticate($Cluster,"","") 
+			$WorkingProcess = $AgentConnection.GetWorkingProcesses($Cluster)[0]	
 
-		$ConnectionString = "{0}:{1}" -f $WorkingProcess.HostName, $WorkingProcess.MainPort
-		WriteLog "Подключаемся к рабочем процессу: $ConnectionString"
+			$ConnectionString = "{0}:{1}" -f $WorkingProcess.HostName, $WorkingProcess.MainPort
+			WriteLog "Подключаемся к рабочем процессу: $ConnectionString"
 
-		$WorkingProcessConnection = $Connector.ConnectWorkingProcess($ConnectionString)
-		$WorkingProcessConnection.AddAuthentication($dbUser,$dbPassword)
+			$WorkingProcessConnection = $Connector.ConnectWorkingProcess($ConnectionString)
+			$WorkingProcessConnection.AddAuthentication($dbUser,$dbPassword)
 
-		$ib = $WorkingProcessConnection.GetInfoBases() | Where {$_.Name -eq $dbName}
+			$ib = $WorkingProcessConnection.GetInfoBases() | Where {$_.Name -eq $dbName}
 
-		if ($ib) {
-			$oldStatus = $ib.ScheduledJobsDenied
+			if ($ib) {
+				$oldStatus = $ib.ScheduledJobsDenied
 
-			if ($oldStatus -ne $flag) {
-				$ib.ScheduledJobsDenied = $flag
-				$WorkingProcessConnection.UpdateInfoBase($ib)
-				WriteLog "Флаг запрета регламентных заданий установлен в значение $flag"
+				if ($oldStatus -ne $flag) {
+					$ib.ScheduledJobsDenied = $flag
+					$WorkingProcessConnection.UpdateInfoBase($ib)
+					WriteLog "Флаг запрета регламентных заданий установлен в значение $flag"
+				}
+			} else {
+				WriteConsole "На сервере [$server1c] не найдена информационная база [$dbName]" -color ([ConsoleColor]::Red)
 			}
-		} else {
-			WriteConsole "На сервере [$server1c] не найдена информационная база [$dbName]" -color ([ConsoleColor]::Red)
+		} catch {
+			WriteConsole "Ошибка установки флага [$flag] запрета регламентных заданий" -color ([ConsoleColor]::Red)
+			WriteLog $_ "ERROR"
+		} finally {
+			$ib = $null
+			$WorkingProcessConnection = $null
+			$WorkingProcess = $null
+			$Cluster = $null
+			$AgentConnection = $null
+			$Connector = $null
 		}
-	} catch {
-		WriteConsole "Ошибка установки флага [$flag] запрета регламентных заданий" -color ([ConsoleColor]::Red)
-		WriteLog $_ "ERROR"
-	} finally {
-		$ib = $null
-		$WorkingProcessConnection = $null
-		$WorkingProcess = $null
-		$Cluster = $null
-		$AgentConnection = $null
-		$Connector = $null
 	}
 
 	return $oldStatus
@@ -339,55 +341,59 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	WriteConsole "Завершение работы пользователей..."
 	$SessionCount = 5
 	$Message = ""
-	try {
-		$connection = ConnectTo1C $DbConnectionString1c
-		$IbConnections = GetProperty $connection "СоединенияИБ"
-		$RetValue = CallMethod $IbConnections "УстановитьБлокировкуСоединений" @("в связи с необходимостью обновления конфигурации", $UnlockCode)
+	if (!$Debug) {
+		try {
+			$connection = ConnectTo1C $DbConnectionString1c
+			$IbConnections = GetProperty $connection "СоединенияИБ"
+			$RetValue = CallMethod $IbConnections "УстановитьБлокировкуСоединений" @("в связи с необходимостью обновления конфигурации", $UnlockCode)
 
-		$BlockParams = [System.__ComObject].InvokeMember("ПараметрыБлокировкиСеансов",[System.Reflection.BindingFlags]::InvokeMethod,$null,$IbConnections,@($true))
+			$BlockParams = [System.__ComObject].InvokeMember("ПараметрыБлокировкиСеансов",[System.Reflection.BindingFlags]::InvokeMethod,$null,$IbConnections,@($true))
 
-		$DisconnectionInterval = GetProperty $BlockParams "ИнтервалОжиданияЗавершенияРаботыПользователей"
-		if ($DisconnectionInterval -gt 1800) {
-			$DisconnectionInterval = 1800
-		}
-		WriteLog "ИнтервалОжиданияЗавершенияРаботыПользователей: $DisconnectionInterval"
+			$DisconnectionInterval = GetProperty $BlockParams "ИнтервалОжиданияЗавершенияРаботыПользователей"
+			if ($DisconnectionInterval -gt 1800) {
+				$DisconnectionInterval = 1800
+			}
+			WriteLog "ИнтервалОжиданияЗавершенияРаботыПользователей: $DisconnectionInterval"
 
-		$DisconnectionStartDateTime = GetProperty $BlockParams "Начало"
-		WriteLog "Начало: $DisconnectionStartDateTime"
+			$DisconnectionStartDateTime = GetProperty $BlockParams "Начало"
+			WriteLog "Начало: $DisconnectionStartDateTime"
 
-		$DisconnectionEnabled = GetProperty $BlockParams "Установлена"
-		WriteLog "Блокировка сеансов: $DisconnectionEnabled"
-		if ($DisconnectionEnabled) {
-			$SessionCount = GetProperty $BlockParams "КоличествоСеансов"
-			WriteLog "КоличествоСеансов: $SessionCount"
+			$DisconnectionEnabled = GetProperty $BlockParams "Установлена"
+			WriteLog "Блокировка сеансов: $DisconnectionEnabled"
+			if ($DisconnectionEnabled) {
+				$SessionCount = GetProperty $BlockParams "КоличествоСеансов"
+				WriteLog "КоличествоСеансов: $SessionCount"
 
-			if ($SessionCount -gt 1) {
-				# Ожидание выхода пользователей
-				$DisconnectionEndDateTime = $DisconnectionStartDateTime.AddSeconds($DisconnectionInterval)
-				WriteLog "Ожидаем до: $DisconnectionEndDateTime"
-				while ((Get-Date) -lt $DisconnectionEndDateTime -and $SessionCount -gt 1) {
-					Start-Sleep -s $WaitUsers
-					$SessionCount = CallMethod $IbConnections "КоличествоСеансовИнформационнойБазы" @($false)
-					WriteLog "КоличествоСеансов: $SessionCount"
+				if ($SessionCount -gt 1) {
+					# Ожидание выхода пользователей
+					$DisconnectionEndDateTime = $DisconnectionStartDateTime.AddSeconds($DisconnectionInterval)
+					WriteLog "Ожидаем до: $DisconnectionEndDateTime"
+					while ((Get-Date) -lt $DisconnectionEndDateTime -and $SessionCount -gt 1) {
+						Start-Sleep -s $WaitUsers
+						$SessionCount = CallMethod $IbConnections "КоличествоСеансовИнформационнойБазы" @($false)
+						WriteLog "КоличествоСеансов: $SessionCount"
+					}
 				}
 			}
+
+			if ($SessionCount -gt 1) {
+				$RetValue = CallMethod $IbConnections "РазрешитьРаботуПользователей"
+				$Message = CallMethod $IbConnections "СообщениеОНеотключенныхСеансах"
+
+				WriteConsole "Не удалось завершить работу пользователей" -color ([ConsoleColor]::Red)
+				WriteLog $Message "ERROR"
+			} 
+		} catch {
+			WriteConsole "Ошибка завершения работы пользователей" -color ([ConsoleColor]::Red)
+			WriteLog $_ "ERROR"
+			$SessionCount = 5
+		} finally {
+			$BlockParams = $null
+			$IbConnections = $null
+			$connection = $null
 		}
-
-		if ($SessionCount -gt 1) {
-			$RetValue = CallMethod $IbConnections "РазрешитьРаботуПользователей"
-			$Message = CallMethod $IbConnections "СообщениеОНеотключенныхСеансах"
-
-			WriteConsole "Не удалось завершить работу пользователей" -color ([ConsoleColor]::Red)
-			WriteLog $Message "ERROR"
-		} 
-	} catch {
-		WriteConsole "Ошибка завершения работы пользователей" -color ([ConsoleColor]::Red)
-		WriteLog $_ "ERROR"
-		$SessionCount = 5
-	} finally {
-		$BlockParams = $null
-		$IbConnections = $null
-		$connection = $null
+	} else {
+		$SessionCount = 1
 	}
 	WriteLog
 	ForceReleaseComConnection
@@ -419,17 +425,19 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 
 	# Удаление патчей
 	WriteConsole "Попытка удаления патчей..."
-	try {
-		$connection = ConnectTo1C $DbConnectionString1c
-		$UpdConfSeverCall = GetProperty $connection "ОбновлениеКонфигурацииВызовСервера"
-		$RetValue = CallMethod $UpdConfSeverCall "УдалитьИсправленияИзСкрипта" 
-		WriteLog "Команда 1с: ОбновлениеКонфигурацииВызовСервера.УдалитьИсправленияИзСкрипта(). Результат: $RetValue"
-	} catch {
-		WriteConsole "Ошибка удаления патчей" -color ([ConsoleColor]::Red)
-		WriteLog $_ "ERROR"
-	} finally {
-		$UpdConfSeverCall = $null
-		$connection = $null
+	if (!$Debug) {
+		try {
+			$connection = ConnectTo1C $DbConnectionString1c
+			$UpdConfSeverCall = GetProperty $connection "ОбновлениеКонфигурацииВызовСервера"
+			$RetValue = CallMethod $UpdConfSeverCall "УдалитьИсправленияИзСкрипта" 
+			WriteLog "Команда 1с: ОбновлениеКонфигурацииВызовСервера.УдалитьИсправленияИзСкрипта(). Результат: $RetValue"
+		} catch {
+			WriteConsole "Ошибка удаления патчей" -color ([ConsoleColor]::Red)
+			WriteLog $_ "ERROR"
+		} finally {
+			$UpdConfSeverCall = $null
+			$connection = $null
+		}
 	}
 	WriteLog
 
@@ -467,23 +475,25 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	if (!$hasError) {
 		# Запуск обработчиков обновления
 		WriteConsole "Запуск обработчиков обновления..."
-		try {
-			$connection = ConnectTo1C $DbConnectionString1c
-			$UpdIbSeverCall = GetProperty $connection "ОбновлениеИнформационнойБазыВызовСервера"
-			$RetValue = CallMethod $UpdIbSeverCall "ВыполнитьОбновлениеИнформационнойБазы" @($false) 
-			WriteLog "Команда 1с: ОбновлениеИнформационнойБазыВызовСервера.ВыполнитьОбновлениеИнформационнойБазы(). Результат: $RetValue"
+		if (!$Debug) {
+			try {
+				$connection = ConnectTo1C $DbConnectionString1c
+				$UpdIbSeverCall = GetProperty $connection "ОбновлениеИнформационнойБазыВызовСервера"
+				$RetValue = CallMethod $UpdIbSeverCall "ВыполнитьОбновлениеИнформационнойБазы" @($false) 
+				WriteLog "Команда 1с: ОбновлениеИнформационнойБазыВызовСервера.ВыполнитьОбновлениеИнформационнойБазы(). Результат: $RetValue"
 
-			$UpdConf = GetProperty $connection "ОбновлениеКонфигурации"
-			$RetValue = CallMethod $UpdConf "ЗавершитьОбновление" @($true,"",$DbUser) 
-			WriteLog "Команда 1с: ОбновлениеКонфигурации.ЗавершитьОбновление(). Результат: $RetValue"
-			$UpdateSuccess = $true
-		} catch {
-			WriteConsole "Ошибка запуска обработчиков обновления" -color ([ConsoleColor]::Red)
-			WriteLog $_ "ERROR"
-		} finally {
-			$UpdConf = $null
-			$UpdIbSeverCall = $null
-			$connection = $null
+				$UpdConf = GetProperty $connection "ОбновлениеКонфигурации"
+				$RetValue = CallMethod $UpdConf "ЗавершитьОбновление" @($true,"",$DbUser) 
+				WriteLog "Команда 1с: ОбновлениеКонфигурации.ЗавершитьОбновление(). Результат: $RetValue"
+				$UpdateSuccess = $true
+			} catch {
+				WriteConsole "Ошибка запуска обработчиков обновления" -color ([ConsoleColor]::Red)
+				WriteLog $_ "ERROR"
+			} finally {
+				$UpdConf = $null
+				$UpdIbSeverCall = $null
+				$connection = $null
+			}
 		}
 		WriteLog
 	} else {
@@ -493,16 +503,18 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 
 	# Разрешение работы пользователей
 	WriteConsole "Разрешение работы пользователей..."
-	try {
-		$connection = ConnectTo1C $DbConnectionString1c
-		$IbConnections = GetProperty $connection "СоединенияИБ"
-		$RetValue = CallMethod $IbConnections "РазрешитьРаботуПользователей"
-	} catch {
-		WriteConsole "Ошибка разрешения работы пользователей" -color ([ConsoleColor]::Red)
-		WriteLog $_ "ERROR"
-	} finally {
-		$IbConnections = $null
-		$connection = $null
+	if (!$Debug) {
+		try {
+			$connection = ConnectTo1C $DbConnectionString1c
+			$IbConnections = GetProperty $connection "СоединенияИБ"
+			$RetValue = CallMethod $IbConnections "РазрешитьРаботуПользователей"
+		} catch {
+			WriteConsole "Ошибка разрешения работы пользователей" -color ([ConsoleColor]::Red)
+			WriteLog $_ "ERROR"
+		} finally {
+			$IbConnections = $null
+			$connection = $null
+		}
 	}
 	WriteLog
 

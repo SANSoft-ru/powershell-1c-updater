@@ -54,12 +54,31 @@ Function WriteLog([string]$text, [string]$level)
 	Write-Output $messageText | Out-File $LogFileName -Append
 }
 
+# Вывод строки текста в консоль
+# text - Текст для вывода, не обязательный параметр, по умолчанию - пустой
+# color - Цвет текста, не обязательный параметр, по умолчанию - Жёлтый
+# alsoInLog - Флаг попутного вывода информации в лог-файл, не обязательный параметр, по умолчанию - да
+Function WriteConsole([string]$text, [ConsoleColor]$color = [ConsoleColor]::Yellow, [bool]$alsoInLog = $true)
+{
+	if ($text) {
+		$text = $text.Trim()
+	}
+
+	Write-Host -Object $text -ForegroundColor $color
+
+	if ($alsoInLog) {
+		$level = $(if ($color -eq [ConsoleColor]::Red) { "ERROR" } else { "" })
+
+		WriteLog -text $text -level $level
+	}
+}
+
 # Вывод стартовой строки текста какого-то процесса в лог-файл
 # text - Текст для вывода, обязательный параметр, по умолчанию - пустой
 # Возвращает время старта
 Function WriteStartMessage([string]$text)
 {
-	WriteLog -text "$text начало..."
+	WriteConsole -text "$text начало..."
 	Return Get-Date
 }
 
@@ -72,7 +91,7 @@ Function WriteStartMessage([string]$text)
 Function WriteStopMessage([string]$text, [int]$result, [DateTime]$startTime)
 {
     $difference = ((Get-Date) - $startTime).ToString()
-	WriteLog -text "$text окончен. Код возврата $result. Время выполнения $difference"
+	WriteConsole -text "$text окончен. Код возврата $result. Время выполнения $difference"
 }
 
 # Запуск процесса 1С с указанными параметрами и ожиданием результата выполнения
@@ -122,7 +141,7 @@ Function ConnectTo1C([string]$connectionString)
 		$global:ConnectionTo1c = $Connector.Connect($connectionString)
 		$global:LastConnectionString = $connectionString
 	} catch {
-		WriteLog "Ошибка при создании и подключении COM-Объекта $COMConnectorId" "ERROR"
+		WriteConsole "Ошибка при создании и подключении COM-Объекта $COMConnectorId" -color ([ConsoleColor]::Red)
 		WriteLog $_ "ERROR"
 		$global:ConnectionTo1c = $null
 		$global:LastConnectionString = ""
@@ -140,7 +159,7 @@ Function GetProperty([System.__ComObject]$obj,[string]$propertyName)
 		$property = [System.__ComObject].InvokeMember($propertyName,[System.Reflection.BindingFlags]::GetProperty,$null,$obj,$null)
 	} catch {
 		$property = $null
-		WriteLog "Ошибка получения свойства $propertyName" "ERROR"
+		WriteConsole "Ошибка получения свойства $propertyName" -color ([ConsoleColor]::Red)
 		WriteLog $_ "ERROR"
 	}
 
@@ -158,7 +177,7 @@ Function CallMethod([System.__ComObject]$obj,[string]$methodName,[object]$paramA
 		$retvalue = [System.__ComObject].InvokeMember($methodName,[System.Reflection.BindingFlags]::InvokeMethod,$null,$obj,$paramArray)
 	} catch {
 		$retvalue = $null
-		WriteLog "Ошибка вызова метода $methodName" "ERROR"
+		WriteConsole "Ошибка вызова метода $methodName" -color ([ConsoleColor]::Red)
 		WriteLog $_ "ERROR"
 	}
 
@@ -193,10 +212,10 @@ Function SetScheduledJobsDenied([string]$server1c,[string]$dbName,[string]$dbUse
 				WriteLog "Флаг запрета регламентных заданий установлен в значение $flag"
 			}
 		} else {
-			WriteLog "На сервере [$server1c] не найдена информационная база [$dbName]" "ERROR"
+			WriteConsole "На сервере [$server1c] не найдена информационная база [$dbName]" -color ([ConsoleColor]::Red)
 		}
 	} catch {
-		WriteLog "Ошибка установки флага [$flag] запрета регламентных заданий" "ERROR"
+		WriteConsole "Ошибка установки флага [$flag] запрета регламентных заданий" -color ([ConsoleColor]::Red)
 		WriteLog $_ "ERROR"
 	} finally {
 		$ib = $null
@@ -272,14 +291,14 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	$DbPath = $DbConnectionParts[0].Trim()
 
 	WriteLog "-------------------------------------------------------"
-	WriteLog "Обновляем [$CounterText] $DbPath"
+	WriteConsole "Обновляем [$CounterText] $DbPath"
 
 	# Путь к БД
 	if ($DbPath.StartsWith("\\") -or ($DbPath.Substring(1, 2) -eq ":\")) {
 		$DbType = "/F"
 		$DbConnectionString1c = "File=""$DbPath"""
 		if (!(Test-Path "$DbPath\1Cv8.1CD")) {
-			WriteLog "Не найден файл БД 1С в папке $DbPath" "ERROR"
+			WriteConsole "Не найден файл БД 1С в папке $DbPath" -color ([ConsoleColor]::Red)
 			WriteLog
 			ForceReleaseComConnection
 			Return $UpdateSuccess
@@ -291,7 +310,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 			$dbName = $DbPathParts[1].Trim()
 			$DbConnectionString1c = "Srvr=""$dbServer"";Ref=""$dbName"""
 		} else {
-			WriteLog "Неверно указаны параметры подключения к БД $DbPath" "ERROR"
+			WriteConsole "Неверно указаны параметры подключения к БД $DbPath" -color ([ConsoleColor]::Red)
 			WriteLog
 			ForceReleaseComConnection
 			Return $UpdateSuccess
@@ -317,7 +336,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	$BackupFileName = """{0}\{1}_{2}.dt.dll""" -f $WorkPath, $DbName, (Get-Date).ToString("yyyyMMdd-HHmmss")
 
 	# Завершение работы пользователей
-	WriteLog "Завершение работы пользователей..."
+	WriteConsole "Завершение работы пользователей..."
 	$SessionCount = 5
 	$Message = ""
 	try {
@@ -358,11 +377,11 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 			$RetValue = CallMethod $IbConnections "РазрешитьРаботуПользователей"
 			$Message = CallMethod $IbConnections "СообщениеОНеотключенныхСеансах"
 
-			WriteLog "Не удалось завершить работу пользователей" "ERROR"
+			WriteConsole "Не удалось завершить работу пользователей" -color ([ConsoleColor]::Red)
 			WriteLog $Message "ERROR"
 		} 
 	} catch {
-		WriteLog "Ошибка завершения работы пользователей" "ERROR"
+		WriteConsole "Ошибка завершения работы пользователей" -color ([ConsoleColor]::Red)
 		WriteLog $_ "ERROR"
 		$SessionCount = 5
 	} finally {
@@ -382,7 +401,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	WriteStopMessage "DumpIB" $returnCode $startTime
 	
 	if ($returnCode -ne 0) {
-		WriteLog "Ошибка резервного копирования" "ERROR"
+		WriteConsole "Ошибка резервного копирования" -color ([ConsoleColor]::Red)
 		WriteLog
 		ForceReleaseComConnection
 		Return $UpdateSuccess
@@ -392,21 +411,21 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 
 	# Установка блокировки регламентных заданий, если её нет
 	if ($DbType -eq "/S") {
-		WriteLog "Попытка установки флага запрета регламентных заданий..."
+		WriteConsole "Попытка установки флага запрета регламентных заданий..."
 		$ScheduledJobsDeniedStatus = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $true
 		WriteLog "Старое значение флага запрета регламентных заданий: $ScheduledJobsDeniedStatus"
 		WriteLog
 	}
 
 	# Удаление патчей
-	WriteLog "Попытка удаления патчей..."
+	WriteConsole "Попытка удаления патчей..."
 	try {
 		$connection = ConnectTo1C $DbConnectionString1c
 		$UpdConfSeverCall = GetProperty $connection "ОбновлениеКонфигурацииВызовСервера"
 		$RetValue = CallMethod $UpdConfSeverCall "УдалитьИсправленияИзСкрипта" 
 		WriteLog "Команда 1с: ОбновлениеКонфигурацииВызовСервера.УдалитьИсправленияИзСкрипта(). Результат: $RetValue"
 	} catch {
-		WriteLog "Ошибка удаления патчей" "ERROR"
+		WriteConsole "Ошибка удаления патчей" -color ([ConsoleColor]::Red)
 		WriteLog $_ "ERROR"
 	} finally {
 		$UpdConfSeverCall = $null
@@ -447,7 +466,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 
 	if (!$hasError) {
 		# Запуск обработчиков обновления
-		WriteLog "Запуск обработчиков обновления..."
+		WriteConsole "Запуск обработчиков обновления..."
 		try {
 			$connection = ConnectTo1C $DbConnectionString1c
 			$UpdIbSeverCall = GetProperty $connection "ОбновлениеИнформационнойБазыВызовСервера"
@@ -459,7 +478,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 			WriteLog "Команда 1с: ОбновлениеКонфигурации.ЗавершитьОбновление(). Результат: $RetValue"
 			$UpdateSuccess = $true
 		} catch {
-			WriteLog "Ошибка запуска обработчиков обновления" "ERROR"
+			WriteConsole "Ошибка запуска обработчиков обновления" -color ([ConsoleColor]::Red)
 			WriteLog $_ "ERROR"
 		} finally {
 			$UpdConf = $null
@@ -468,18 +487,18 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 		}
 		WriteLog
 	} else {
-		WriteLog "Во время обновления возникли ошибки" "ERROR"
+		WriteConsole "Во время обновления возникли ошибки" -color ([ConsoleColor]::Red)
 		WriteLog
 	}
 
 	# Разрешение работы пользователей
-	WriteLog "Разрешение работы пользователей..."
+	WriteConsole "Разрешение работы пользователей..."
 	try {
 		$connection = ConnectTo1C $DbConnectionString1c
 		$IbConnections = GetProperty $connection "СоединенияИБ"
 		$RetValue = CallMethod $IbConnections "РазрешитьРаботуПользователей"
 	} catch {
-		WriteLog "Ошибка разрешения работы пользователей" "ERROR"
+		WriteConsole "Ошибка разрешения работы пользователей" -color ([ConsoleColor]::Red)
 		WriteLog $_ "ERROR"
 	} finally {
 		$IbConnections = $null
@@ -488,19 +507,19 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	WriteLog
 
 	if ($UpdateSuccess) {
-		WriteLog "Запуск ENTERPRISE..."
+		WriteConsole "Запуск ENTERPRISE..."
 		Run1C "ENTERPRISE $DbConnectionString"
 		WriteLog
 	}
 
 	if ($ScheduledJobsDeniedStatus) {
-		WriteLog "Сброс флага запрета регламентных заданий..."
+		WriteConsole "Сброс флага запрета регламентных заданий..."
 		$rc = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $false
 		WriteLog "Пауза $Delay сек."
 		Start-Sleep -s $Delay
 	}
 	
-	WriteLog "Попытка восстановления флага запрета регламентных заданий..."
+	WriteConsole "Попытка восстановления флага запрета регламентных заданий..."
 	$rc = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $ScheduledJobsDeniedStatus
 	WriteLog
 		
@@ -656,21 +675,21 @@ ForEach ($DbKey In $DbList.Keys) {
 	$UpdateResults.Add($updResultString)
 }
 
-WriteLog
-WriteLog "Итоги обновления:"
-WriteLog "=".PadRight($tableWidth,"=")
-WriteLog ($tableRowTemplate -f (ToLeftStringWithWidth "База" 15),(ToLeftStringWithWidth "Результат" 9), "Время") 
-WriteLog "=".PadRight($tableWidth,"=")
+WriteConsole
+WriteConsole "Итоги обновления:" -color ([ConsoleColor]::Cyan)
+WriteConsole "=".PadRight($tableWidth,"=") -color ([ConsoleColor]::Cyan)
+WriteConsole ($tableRowTemplate -f (ToLeftStringWithWidth "База" 15),(ToLeftStringWithWidth "Результат" 9), "Время") -color ([ConsoleColor]::Cyan) 
+WriteConsole "=".PadRight($tableWidth,"=") -color ([ConsoleColor]::Cyan)
 ForEach ($updResult In $UpdateResults) {
-	WriteLog $updResult
+	WriteConsole $updResult -color ([ConsoleColor]::Cyan)
 }
-WriteLog "=".PadRight($tableWidth,"=")
+WriteConsole "=".PadRight($tableWidth,"=") -color ([ConsoleColor]::Cyan)
 
 $span = ((Get-Date) - $overallStartTime).ToString()
-WriteLog "Общеее время обновления $span"
+WriteConsole "Общеее время обновления $span" -color ([ConsoleColor]::Cyan)
 
-WriteLog
-WriteLog
-WriteLog "SANSoft(c) 2024. Обновление баз 1С"
+WriteConsole
+WriteConsole
+WriteConsole "SANSoft(c) 2024. Обновление баз 1С" -color ([ConsoleColor]::Blue)
 
 ForceReleaseComConnection

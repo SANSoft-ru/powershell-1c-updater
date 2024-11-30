@@ -571,8 +571,11 @@ if ($Mode -eq "A") {
 } elseif ($Mode -eq "H") {
 	$ModeName = "HRM"
 	$ModeDescription = "ЗУП"
+} elseif ($Mode -eq "U") {
+	$ModeName = "TSZHBase"
+	$ModeDescription = "УК"
 } else {
-	Write-Warning("Параметр Mode должен быть равен A (Бухгалтерия) или H (ЗУП)")
+	Write-Warning("Параметр Mode должен быть равен A (Бухгалтерия) или H (ЗУП) или U (УК)")
 	$ParamIsGood = $false
 }
 
@@ -612,7 +615,9 @@ if (!(Test-Path $ConfigFileName)) {
 				}
 			} else {
 				If (!$DbList.ContainsKey($Key)) {
-					if (($mode -eq "a" -and !$KeyName.StartsWith("zk-")) -or ($mode -eq "h" -and $KeyName.StartsWith("zk-"))) {
+					if (($mode -eq "a" -and !$KeyName.StartsWith("zk-")) `
+						-or ($mode -eq "h" -and $KeyName.StartsWith("zk-")) `
+						-or ($mode -eq "u" -and $KeyName.StartsWith("uk-"))) {
 						if ($Value) {
 							$DbList.Add($Key, $Value.Trim())
 						} else {

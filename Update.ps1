@@ -32,7 +32,7 @@ $global:ConnectionTo1c = $null
 $global:LastConnectionString = ""
 $COMConnectorId = "v83.COMConnector"
 $UnlockCode = "Powershell_ПакетноеОбновлениеКонфигурацииИБ"
-$Delay = $(if ($Debug) { 5 } else { 600 })
+$Delay = $(if ($Debug) { 5 } else { 60 })
 $WaitUsers = $(if ($Debug) { 90 } else { 180 })
 
 $Mode = $Mode.ToUpper()
@@ -525,10 +525,31 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	}
 
 	if ($ScheduledJobsDeniedStatus) {
-		WriteConsole "Сброс флага запрета регламентных заданий..."
+		WriteLog "Сброс флага запрета регламентных заданий..."
 		$rc = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $false
-		WriteLog "Пауза $Delay сек."
-		Start-Sleep -s $Delay
+
+		try {
+			$connection = ConnectTo1C $DbConnectionString1c
+
+			For ($i = 1; $i -le 15; $i++) {
+				Start-Sleep -s $Delay
+
+				$UpdateIBService = GetProperty $connection "ОбновлениеИнформационнойБазыСлужебный"
+				$UpdateIBInfo = [System.__ComObject].InvokeMember("СведенияОбОбновленииИнформационнойБазы",[System.Reflection.BindingFlags]::InvokeMethod,$null,$UpdateIBService,$null)
+				$EndOfUpdateTime = GetProperty $UpdateIBInfo "ВремяОкончаниеОтложенногоОбновления"
+				WriteLog "Команда 1с: ВремяОкончаниеОтложенногоОбновления. Результат: $EndOfUpdateTime"
+
+				if ($EndOfUpdateTime -ne $null)
+					Break
+			}
+		} catch {
+			WriteLog "Ошибка ожидания оконочания обновления" "ERROR"
+			WriteLog $_ "ERROR"
+		} finally {
+			$UpdateIBInfo = $null
+			$UpdateIBService = $null
+			$connection = $null
+		}
 	}
 	
 	WriteConsole "Попытка восстановления флага запрета регламентных заданий..."

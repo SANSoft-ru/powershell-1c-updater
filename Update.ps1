@@ -539,8 +539,9 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 				$EndOfUpdateTime = GetProperty $UpdateIBInfo "ВремяОкончаниеОтложенногоОбновления"
 				WriteLog "Команда 1с: ВремяОкончаниеОтложенногоОбновления. Результат: $EndOfUpdateTime"
 
-				if ($EndOfUpdateTime -ne $null)
+				if ($null -ne $EndOfUpdateTime) {
 					Break
+                }
 			}
 		} catch {
 			WriteLog "Ошибка ожидания оконочания обновления" "ERROR"
@@ -615,16 +616,27 @@ if (!(Test-Path $ConfigFileName)) {
 				}
 			} else {
 				If (!$DbList.ContainsKey($Key)) {
-					if (($mode -eq "a" -and !$KeyName.StartsWith("zk-")) `
-						-or ($mode -eq "h" -and $KeyName.StartsWith("zk-")) `
-						-or ($mode -eq "u" -and $KeyName.StartsWith("uk-"))) {
+					$CanAdd = $false
+
+					# Проверим БД на префиксы
+					If ($KeyName.StartsWith("zk-")) {
+						$CanAdd = ($mode -eq "h")
+					} 
+					ElseIf ($KeyName.StartsWith("uk-")) {
+						$CanAdd = ($mode -eq "u")
+					}
+					Else {
+						$CanAdd = ($mode -eq "a")
+					}
+ 
+					if ($CanAdd) {
 						if ($Value) {
 							$DbList.Add($Key, $Value.Trim())
 						} else {
 							Write-Warning("В конфигурации не указана БД [$Key]")
 							$ParamIsGood = $false
-						}
-					}
+					    }
+                    }
 				} else {
 					Write-Warning("В конфигурации дублируется БД [$Key]")
 					$ParamIsGood = $false

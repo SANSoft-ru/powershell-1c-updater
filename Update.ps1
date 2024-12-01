@@ -445,6 +445,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 	$hasError = $false
 	ForceReleaseComConnection
 	
+	$NeedSuspendedUpdate = $false
 	$ind=0
 	ForEach ($Version In $Versions) {
 		$ind++
@@ -466,6 +467,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 				$hasError = $true
 				Break
 			} else {
+				$NeedSuspendedUpdate = $true
 				$hasError = $false
 			}
 		} else {
@@ -525,7 +527,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 		WriteLog
 	}
 
-	if ($ScheduledJobsDeniedStatus) {
+	if ($NeedSuspendedUpdate -and $ScheduledJobsDeniedStatus) {
 		WriteLog "Сброс флага запрета регламентных заданий..."
 		$rc = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $false
 
@@ -564,15 +566,15 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 			$connection = $null
 		}
 	}
-	
+
 	WriteConsole "Попытка восстановления флага запрета регламентных заданий..."
 	$rc = SetScheduledJobsDenied $dbServer $dbName $DbUser $DbPassword $ScheduledJobsDeniedStatus
 	WriteLog
-		
+
 	WriteLog
 
 	ForceReleaseComConnection
-	
+
 	Return $UpdateSuccess
 }
 
@@ -640,7 +642,7 @@ if (!(Test-Path $ConfigFileName)) {
 					Else {
 						$CanAdd = ($mode -eq "a")
 					}
- 
+
 					if ($CanAdd) {
 						if ($Value) {
 							$DbList.Add($Key, $Value.Trim())
@@ -652,7 +654,7 @@ if (!(Test-Path $ConfigFileName)) {
 				} else {
 					Write-Warning("В конфигурации дублируется БД [$Key]")
 					$ParamIsGood = $false
- 				}
+				}
 			}
 		} else {
 			Write-Warning("Строка конфигурации [$ConfigLine] не соотвествует шаблону Key=Value")

@@ -33,6 +33,7 @@ $global:LastConnectionString = ""
 $COMConnectorId = "v83.COMConnector"
 $UnlockCode = "Powershell_ПакетноеОбновлениеКонфигурацииИБ"
 $Delay = $(if ($Debug) { 5 } else { 60 })
+$MaxDelayCount = 60
 $WaitUsers = $(if ($Debug) { 90 } else { 180 })
 
 $Mode = $Mode.ToUpper()
@@ -530,8 +531,12 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 
 		try {
 			$connection = ConnectTo1C $DbConnectionString1c
+			$suspendedUpdateDone = $false
+			$timeoutForUpdate = $MaxDelayCount * $Delay
 
-			For ($i = 1; $i -le 15; $i++) {
+			WriteConsole "Ожидание окончания отложенных обработчиков обновления ($timeoutForUpdate сек)..."
+
+			For ($i = 1; $i -le $MaxDelayCount; $i++) {
 				Start-Sleep -s $Delay
 
 				$UpdateIBService = GetProperty $connection "ОбновлениеИнформационнойБазыСлужебный"
@@ -540,8 +545,15 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 				WriteLog "Команда 1с: ВремяОкончаниеОтложенногоОбновления. Результат: $EndOfUpdateTime"
 
 				if ($null -ne $EndOfUpdateTime) {
+					$suspendedUpdateDone = $true
 					Break
-                }
+				}
+			}
+			
+			If ($suspendedUpdateDone) {
+				WriteConsole "Отложенное обновление успешно завершено"
+			} else {
+				throw "Ожидание отложенного обновления прервано по таймауту $timeoutForUpdate сек."
 			}
 		} catch {
 			WriteLog "Ошибка ожидания оконочания обновления" "ERROR"

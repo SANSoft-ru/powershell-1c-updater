@@ -475,7 +475,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 		}
 	}
 
-	if (!$hasError) {
+	if ($NeedSuspendedUpdate) {
 		# Запуск обработчиков обновления
 		WriteConsole "Запуск обработчиков обновления..."
 		if (!$Debug) {
@@ -492,15 +492,13 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 			} catch {
 				WriteConsole "Ошибка запуска обработчиков обновления" -color ([ConsoleColor]::Red)
 				WriteLog $_ "ERROR"
+				$hasError = $true
 			} finally {
 				$UpdConf = $null
 				$UpdIbSeverCall = $null
 				$connection = $null
 			}
 		}
-		WriteLog
-	} else {
-		WriteConsole "Во время обновления возникли ошибки" -color ([ConsoleColor]::Red)
 		WriteLog
 	}
 
@@ -514,6 +512,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 		} catch {
 			WriteConsole "Ошибка разрешения работы пользователей" -color ([ConsoleColor]::Red)
 			WriteLog $_ "ERROR"
+			$hasError = $true
 		} finally {
 			$IbConnections = $null
 			$connection = $null
@@ -560,6 +559,7 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 		} catch {
 			WriteLog "Ошибка ожидания оконочания обновления" "ERROR"
 			WriteLog $_ "ERROR"
+			$hasError = $true
 		} finally {
 			$UpdateIBInfo = $null
 			$UpdateIBService = $null
@@ -575,7 +575,12 @@ Function DoUpdate([string]$CounterText,[string]$DbName,[string]$DbConnection,[Sy
 
 	ForceReleaseComConnection
 
-	Return $UpdateSuccess
+	if ($hasError) {
+		WriteConsole "Во время обновления возникли ошибки" -color ([ConsoleColor]::Red)
+		WriteLog
+	}
+	
+	Return !$hasError
 }
 
 # Разбор параметров запуска
